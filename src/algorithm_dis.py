@@ -13,15 +13,15 @@ from collections import defaultdict
 from utils import *
 import os
 
-def exec_bfs(G_d_cui, until_layer, workers = 4):
+def exec_bfs(G_d_other, until_layer, workers = 4):
     '''运行BFS算法'''
     futures = {}        # 存储线程
     degreeList = {}     # 存储结点的度序列
 
-    G_cui_d = load_from_disk('cui_d_dict')
-    # G_cui_d = load_from_disk('g_d_dict')
+    G_other_d = load_from_disk('other_d_dict')
+    # G_other_d = load_from_disk('g_d_dict')
 
-    vertices = list(sorted(G_d_cui.keys()))     # 全部疾病结点
+    vertices = list(sorted(G_d_other.keys()))     # 全部疾病结点
     parts = workers            # 一共分成workers部分，分块是为了让CPU并行处理、提高执行效率
     chunks = partition(vertices, parts)     # 把全部顶点分成4部分，chunks存储了workers块被分的顶点
 
@@ -29,7 +29,7 @@ def exec_bfs(G_d_cui, until_layer, workers = 4):
         part = 1
         for c in chunks:
             # 获取块c中的顶点的度序列
-            job = executor.submit(getDegreeListsVertices, G_d_cui, G_cui_d, until_layer, c)
+            job = executor.submit(getDegreeListsVertices, G_d_other, G_other_d, until_layer, c)
             futures[job] = part
             part += 1
 
@@ -37,35 +37,35 @@ def exec_bfs(G_d_cui, until_layer, workers = 4):
             dl = job.result()       # 获取进程结果
             degreeList.update(dl)   # 对degreeList进行更新
 
-    # dl = getDegreeListsVertices(G_d_cui, G_cui_d, vertices)
+    # dl = getDegreeListsVertices(G_d_other, G_other_d, vertices)
     # degreeList.update(dl)
 
     logging.info("saving degreeList on dist...")
     save_on_disk(degreeList, 'degreeList')
     logging.info("saving degreeList successfully")
 
-def getDegreeListsVertices(G_d_cui, G_cui_d, until_layer, vertices):
+def getDegreeListsVertices(G_d_other, G_other_d, until_layer, vertices):
     '''获取图G中所有vertices顶点的度序列'''
     degreeList = {}
 
     for v in vertices:
         # 获取结点v 在整个图G中前calcUntilLayer邻域内的度序列信息
-        degreeList[v] = getDegreeLists(G_d_cui, G_cui_d, until_layer, v)
+        degreeList[v] = getDegreeLists(G_d_other, G_other_d, until_layer, v)
     return degreeList
 
-def getDegreeLists(G_d_cui, G_cui_d, until_layer, root):
+def getDegreeLists(G_d_other, G_other_d, until_layer, root):
     '''
     获取结点root在G中的度序列
 
     args:
-        G_d_cui: 图G, key: d, value: cui
-        G_cui_d: 图G, key: cui, value: d
+        G_d_other: 图G, key: d, value: other
+        G_other_d: 图G, key: other, value: d
         root: 起始点
     return:
         listas: 起始点在前calcUntilLayer邻域内, 每个结点的度序列。
     '''
     listas = {}
-    vector_access = [0] * (max(G_d_cui) + 1)          # 初始化list, 初始化值为0, 长度为(max(g) + 1)
+    vector_access = [0] * (max(G_d_other) + 1)          # 初始化list, 初始化值为0, 长度为(max(g) + 1)
 
     queue = deque()     # 存储将要访问的结点
     queue.append(root)  
@@ -81,11 +81,11 @@ def getDegreeLists(G_d_cui, G_cui_d, until_layer, root):
         vertex = queue.popleft()
         timeToDepthIncrease -= 1
 
-        l.append(len(G_d_cui[vertex]))        # 将顶点的 度 存储到l队列中
+        l.append(len(G_d_other[vertex]))        # 将顶点的 度 存储到l队列中
 
         # 以vertex为中心, 存储vertex的邻域
-        for u in G_d_cui[vertex]:               # u 为与vertex疾病相关的表型编号
-            for v in G_cui_d[u]:                # v 为与表型u相关的疾病编号
+        for u in G_d_other[vertex]:               # u 为与vertex疾病相关的表型编号
+            for v in G_other_d[u]:                # v 为与表型u相关的疾病编号
                 if(vector_access[v] == 0):          # 该疾病编号未被访问过
                     vector_access[v] = 1
                     queue.append(v)
@@ -140,11 +140,8 @@ def calc_distances_all(vertices, list_vertices, degreeList, part):
         cont += 1
     
     preprocess_consolides_distances(distances)      # 对每层距离进行逐层合并
-    # save_on_disk(distances, 'distances')
-    if part == -1:
-        save_on_disk(distances, 'distances-query')
-    else:
-        save_on_disk(distances, 'distances-' + str(part))
+
+    save_on_disk(distances, 'distances-' + str(part))
     return
 
 
@@ -170,3 +167,5 @@ def cost(a, b):
     m = max(a, b) + ep
     mi = min(a, b) + ep
     return ((m / mi) - 1)
+
+

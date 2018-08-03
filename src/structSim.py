@@ -32,22 +32,22 @@ def generate_degreeSeq_with_bfs(G, until_layer, workers = 4):
     print("finished")
     return
 
-def generate_degreeSeq_with_bfs_query(G, until_layer,query_d):
-    '''根据疾病编号产生该疾病的度序列'''
+# def generate_degreeSeq_with_bfs_query(G, until_layer,query_d):
+#     '''根据疾病编号产生该疾病的度序列'''
 
-    G_cui_d = load_from_disk('cui_d_dict')
+#     G_other_d = load_from_disk('other_d_dict')
 
-    degreeList = {}
-    for i in range(len(query_d)):
-        degreeList[i] = getDegreeLists(G, G_cui_d, until_layer,i)
+#     degreeList = {}
+#     for i in range(len(query_d)):
+#         degreeList[i] = getDegreeLists(G, G_other_d, until_layer,i)
 
-    save_on_disk(degreeList, 'degreeList-query')
-    print("query finished")
+#     save_on_disk(degreeList, 'degreeList-query')
+#     print("query finished")
 
-    return
+#     return
 
 
-def calc_distances_all_vertices(G, workers = 8):
+def calc_distances_all_vertices(G, workers = 4):
     '''计算每个结点之间的距离'''
     logging.info("start to calculate distance")
 
@@ -101,7 +101,7 @@ def calc_distances_query(G, query_d):
 
     return
 
-def consolide_distances(workers = 8):
+def consolide_distances(workers = 4):
 
     distances = {}
 
@@ -115,14 +115,13 @@ def consolide_distances(workers = 8):
     # preprocess_consolides_distances(distances)
     save_on_disk(distances, 'distances')
 
-def calc_strucSim(status):
+    return
+
+def calc_strucSim():
     '''计算结构相似度'''
     struct_sim = {}
 
-    if status == 'query':
-        distances = load_from_disk('distances-query')
-    else:
-        distances = load_from_disk('distances')
+    distances = load_from_disk('distances')
     
     
     for vertices, layers in distances.items():
@@ -132,7 +131,7 @@ def calc_strucSim(status):
         struct_sim[vertices] = math.exp(-max_distance)
         print(vertices, "structsim:", struct_sim[vertices])
     
-    save_on_disk(struct_sim, 'd_cui_structsim')
+    out_file = 'd_other_structsim'
+    save_on_disk(struct_sim, out_file)
 
-
-
+    return out_file

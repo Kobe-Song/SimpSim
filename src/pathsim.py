@@ -14,9 +14,10 @@ import pickle
 import argparse
 from itertools import product
 from itertools import combinations
+from utils import *
 
 
-def cal_pathSim(G):
+def cal_pathSim_all(G):
     """
     calculate the meta path-based similarity score for pairwise nodes
     store the results in .pkl file
@@ -35,7 +36,7 @@ def cal_pathSim(G):
 
     d_combination_list = list(combinations(mimnumber_set, 2))  # 对全部疾病进行两两排列组合，组合结果存入list中
 
-    print(d_combination_list)
+    # print(d_combination_list)
 
     d_pair_sim_dict = {}  # 存储所有疾病对之间的pathsim值
 
@@ -57,20 +58,23 @@ def cal_pathSim(G):
         # 只把相似度大于0的记录保存, 1076370
         if (pathsim_score > 0):
             d_pair_sim_dict[(mim1, mim2)] = pathsim_score
-            print("(", mim1, ",", mim2, "), pathsim:", pathsim_score)
+            # print("(", mim1, ",", mim2, "), pathsim:", pathsim_score)
 
     print("pathsim file length:", len(d_pair_sim_dict))
 
     # 输出为.pkl文件
-    reference_relations_file = os.path.join('save/d_pair_pathsim.pkl')
+    outfile = 'd_pair_pathsim'
+    save_on_disk(d_pair_sim_dict, outfile)
+    print("dump PathSim file successfully!")
+    # reference_relations_file = os.path.join('save/d_pair_pathsim.pkl')
 
-    if os.path.exists(reference_relations_file):
-        print("find dumped reference relations file, skip pathsim calculating.")
-    else:
-        # 存储计算结果
-        with open(reference_relations_file, 'wb') as f:
-            pickle.dump(d_pair_sim_dict, f)
-            print("dump PathSim file successfully!")
+    # if os.path.exists(reference_relations_file):
+    #     print("find dumped reference relations file, skip pathsim calculating.")
+    # else:
+    #     # 存储计算结果
+    #     with open(reference_relations_file, 'wb') as f:
+    #         pickle.dump(d_pair_sim_dict, f)
+    #         print("dump PathSim file successfully!")
 
-    return
+    return outfile
 
