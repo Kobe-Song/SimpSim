@@ -48,6 +48,11 @@ def cal_pathSim_all(G):
         intersect_cui_list = list(set(cui_list_1).intersection(set(cui_list_2)))
 
         path_count_mim1_mim2 = len(intersect_cui_list)  # 分子部分，cui交集个数
+        
+        # 寻找 mim1 — mim2 — mim3 结点对, 记录 mim1 — mim3 相似度值
+        # if path_count_mim1_mim2 != 0:
+        #     for mim3 in cui_list_2:
+
 
         path_count_self_mim1 = len(cui_list_1)  # d1的cui个数
         path_count_self_mim2 = len(cui_list_2)  # d2的cui个数

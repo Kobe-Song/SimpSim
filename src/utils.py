@@ -20,8 +20,8 @@ import graph
 
 src_f = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 dir_f = os.path.dirname(src_f)
-folder_save = dir_f + "/../save/"
-folder_data = dir_f + "/../data/experiment/"
+folder_save = dir_f + "/save/"
+folder_data = dir_f + "/data/experiment/"
 
 def read_graph(edgefile):
     '''
@@ -50,6 +50,16 @@ def load_csv_file(filename):
     data = pandas.read_csv(csv_file)    # 打开csv文件
 
     return data
+
+def load_emb_file(filename):
+    logging.info('load emb data from disk ...')
+    val = None
+
+    with open(dir_f + filename, 'r') as f:
+        val = f.read()
+    
+    return val
+
 
 def load_from_disk(filename):
     logging.info('load data from disk ...')

@@ -12,6 +12,7 @@ from structSim import *
 from sim2vec import *
 from pathsim import *
 from combSim import *
+from sim_search import *
 import utils
 
 logging.basicConfig(filename='SimpSim.log', filemode='w', level=logging.DEBUG, format='%(asctime)s %(message)s')
@@ -26,15 +27,21 @@ def parse_args():
     # 输入文件（节点、边文件）
     parser.add_argument('--input', nargs='?', default='data/simpsim_public_hmdd_d_rna.csv', help='Input graph path')
 
-    parser.add_argument('--output', nargs='?', default='save/disease.emb', help='Embeddings path')
+    parser.add_argument('--output', nargs='?', default='/emb/disease.emb', help='Embeddings path')
 
     parser.add_argument('--dimensions', type=int, default=128, help='Number of dimensions. Default is 128.')
+
+    parser.add_argument('--walk-length', type=int, default=80, help='Length of walk per source. Default is 80.')
+
+    parser.add_argument('--num-walks', type=int, default=10, help='Number of walks per source. Default is 10.')
+
+    parser.add_argument('--window-size', type=int, default=10, help='Context size for optimization. Default is 10.')
 
     parser.add_argument('--until-layer', type=int, default=None, help='Calculation until the layer.')
 
     parser.add_argument('--iter', default=5, type=int, help='Number of epochs in SGD')  # 重复游走的次数，一个节点执行5次独立的游走，产生5个独立的序列作为这个节点的上下文。
 
-    parser.add_argument('--workers', type=int, default=4, help='Number of parallel workers. Default is 8.')
+    parser.add_argument('--workers', type=int, default=4, help='Number of parallel workers. Default is 4.')
 
     parser.add_argument('--weighted', dest='weighted', action='store_true', help='Boolean specifying (un)weighted. Default is unweighted.')
     parser.add_argument('--unweighted', dest='unweighted', action='store_false')
@@ -115,16 +122,18 @@ def exec_StructSim(G, filename):
 
     time_start = time.time()
     # 获取疾病结点的度序列
-    generate_degreeSeq_with_bfs(G, 5)
+    generate_degreeSeq_with_bfs(G, 2)
+    print(filename, "generate degree Sequence finished")
 
     # 计算结点之间的距离
     calc_distances_all_vertices(G)
+    print(filename, "calculate structure distance Sequence finished")
 
     # 合并每层距离
     consolide_distances()
 
     # 计算结构相似度
-    structSim_file_name = calc_strucSim()
+    structSim_file_name = calc_strucSim(filename)
 
     time_end = time.time()
     print('total time cost for structSim: ', time_end - time_start)
@@ -139,8 +148,12 @@ def exec_combine_sim(pathSim_file_name, structSim_file_name, index):
         here we use inequality equation to combine them
         分别从文件中读出语义相似字典以及结构相似字典，用均值不等式将二者融合，将最终结果输出保存
     """
+    time_start = time.time()
 
     combined_file_name = combine_sim(pathSim_file_name, structSim_file_name, index)
+
+    time_end = time.time()
+    print('total time cost for combSim: ', time_end - time_start)
 
     return combined_file_name
 
@@ -163,11 +176,11 @@ def exec_construct_multi_sim_network(sim_file_list):
     """
     time_start = time.time()
     construct_multi_sim_network(sim_file_list)  # 构建多层网络
-
-    preprocess_parameters_random_walk()  # 初始化随机游走参数
+    print("construct multiple network finished")
+    # preprocess_parameters_random_walk()  # 初始化随机游走参数
 
     simulate_walks(args.num_walks, args.walk_length)  # 在多层图中随机游走，对每个节点产生上下文
-
+    print("random walk finished")
     time_end = time.time()
     print('total time cost for walk: ', time_end - time_start)
     return
@@ -180,13 +193,27 @@ def exec_embedding():
     logging.info("Initializing creation of the representations...")
     walks = LineSentence('walk_result.txt')
     model = Word2Vec(walks, size=args.dimensions, window=args.window_size, min_count=0, hs=1, sg=1, workers=args.workers, iter=args.iter)
-    model.wv.save_word2vec_format(args.output)
+    model.wv.save_word2vec_format(get_sim_path() + args.output)
     logging.info("Representations for all disease nodes created.")
 
     return
 
 
-def main(args, filelist):
+def exec_sim_search(args, query_mim_list, k):
+    '''
+        searching top-k similar diseases for query disease
+    '''
+    logging.info("searching top-k similar diseases...")
+
+    embedFile = args.output  # embedding file
+    sim_d_list = top_k_sim_search(embedFile, query_mim_list, k)
+
+    logging.info("Similarity search for top-k diseases finished.")
+
+    return
+
+
+def main(args, filelist, query_mim_list, k):
     """
     Main Steps of MultiSimpSim::
         1. calculate the similarity(structural and semantic) between pairwise nodes for each data set
@@ -195,17 +222,29 @@ def main(args, filelist):
         3. conduct the biased random walk for every node for several times, to generate independent sequences as its context
         4. use the word2vec package to learning the embeddings for every node by its context.
     """
-    sim_file_list = exec_SimpSim(args, filelist)  # 对所有数据集计算得到相似关系，并构建多元相似网络，执行随机游走
+    # sim_file_list = exec_SimpSim(args, filelist)        # 2. 对所有数据集计算得到相似关系，并保存输出计算结果
 
-    exec_construct_multi_sim_network(sim_file_list)
+    sim_file_list = ['combined_file_name0', 'combined_file_name1', 'combined_file_name2']
+    exec_construct_multi_sim_network(sim_file_list)  # 3. 对上一步计算到的多个相似网络进行关联，得到多源相似网络，在网络上执行随机游走
 
-    exec_embedding()
+    exec_embedding()  # 4. 调用skip-gram模型，学习节点的embedding向量
+
+    exec_sim_search(args, query_mim_list, k)
 
 
 if __name__ == "__main__":
     args = parse_args()
 
-    # filelist = ['mim_cui', 'mim_geneid', 'mim_protein']  # 数据集
-    filelist = ['mim_geneid', 'mim_protein']  # 数据集
+    filelist = ['mim_cui', 'mim_locus', 'mim_protein']  # 1. 输入数据集, 表型, 染色体, 蛋白质
+    # filelist = ['mim_geneid', 'mim_protein']  # 数据集
+    # filelist = ['d_chemical_888', 'd_genes_888']
+    # filelist = ['d_pubmed_888']
 
-    main(args, filelist)
+    # query_mim = 'D10652'  # query disease
+    query_mim_list = [
+        'D10652', 'D11335', 'D11476', 'D12176', 'D12336', 'D12365', 'D12858', 'D12930', 'D13809', 'D1826', 'D1936', 'D2349', 'D2355', 'D2377', 'D2841', 'D3083',
+        'D3312', 'D5844', 'D6132', 'D615', 'D7148', 'D83', 'D8469', 'D848', 'D9351', 'D9455', 'D9588'
+    ]
+    k = 10  # top k
+
+    main(args, filelist, query_mim_list, k)

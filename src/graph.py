@@ -103,7 +103,7 @@ def load_edge_file(filename):
     column2 = data.columns[1]
 
     for row in range(len(data)):
-        mimnumber = int(data[column1][row])     # 疾病编号
+        mimnumber = data[column1][row]     # 疾病编号
         other = data[column2][row]         # 其他编号
 
         d_other_dict[mimnumber].append(other)   # 疾病_其他_字典
@@ -133,8 +133,8 @@ def load_edge_file(filename):
     save_on_disk(other_d_dict, 'other_d_dict')
 
     vertices = list(d_other_dict.keys())
+    vertices = sorted(vertices)
     save_on_disk(vertices, 'vertices')
-
     # other_name = filename.split('_')[1]
     # save_on_disk(d_other_dict, 'd_' + other_name + '_dict')
     # save_on_disk(other_d_dict, other_name + '_d_dict')

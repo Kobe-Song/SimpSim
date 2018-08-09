@@ -29,7 +29,7 @@ def generate_degreeSeq_with_bfs(G, until_layer, workers = 4):
         job.result()
     # exec_bfs(G)
 
-    print("finished")
+    # print("finished")
     return
 
 # def generate_degreeSeq_with_bfs_query(G, until_layer,query_d):
@@ -51,7 +51,7 @@ def calc_distances_all_vertices(G, workers = 4):
     '''计算每个结点之间的距离'''
     logging.info("start to calculate distance")
 
-    print("start to calculate")
+    # print("start to calculate")
     futures = {}
 
     vertices = list(reversed(sorted(G.keys())))         # 将结点从大到小排序
@@ -117,7 +117,7 @@ def consolide_distances(workers = 4):
 
     return
 
-def calc_strucSim():
+def calc_strucSim(filename):
     '''计算结构相似度'''
     struct_sim = {}
 
@@ -129,9 +129,9 @@ def calc_strucSim():
         max_layer = max(layers.keys())
         max_distance = layers[max_layer]
         struct_sim[vertices] = math.exp(-max_distance)
-        print(vertices, "structsim:", struct_sim[vertices])
+        # print(vertices, "structsim:", struct_sim[vertices])
     
-    out_file = 'd_other_structsim'
+    out_file = filename + 'd_other_structsim'
     save_on_disk(struct_sim, out_file)
 
     return out_file

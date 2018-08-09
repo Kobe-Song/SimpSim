@@ -12,6 +12,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from collections import defaultdict
 from utils import *
 import os
+# import Levenshtein
 
 def exec_bfs(G_d_other, until_layer, workers = 4):
     '''运行BFS算法'''
@@ -65,7 +66,8 @@ def getDegreeLists(G_d_other, G_other_d, until_layer, root):
         listas: 起始点在前calcUntilLayer邻域内, 每个结点的度序列。
     '''
     listas = {}
-    vector_access = [0] * (max(G_d_other) + 1)          # 初始化list, 初始化值为0, 长度为(max(g) + 1)
+    # vector_access = [0] * (max(G_d_other) + 1)          # 初始化list, 初始化值为0, 长度为(max(g) + 1)
+    vector_access = defaultdict(int)
 
     queue = deque()     # 存储将要访问的结点
     queue.append(root)  
@@ -82,6 +84,7 @@ def getDegreeLists(G_d_other, G_other_d, until_layer, root):
         timeToDepthIncrease -= 1
 
         l.append(len(G_d_other[vertex]))        # 将顶点的 度 存储到l队列中
+        # l.append(str(len(G_d_other[vertex])))       # 将顶点的 度(字符串) 存储到l队列中
 
         # 以vertex为中心, 存储vertex的邻域
         for u in G_d_other[vertex]:               # u 为与vertex疾病相关的表型编号
@@ -95,6 +98,7 @@ def getDegreeLists(G_d_other, G_other_d, until_layer, root):
         if timeToDepthIncrease == 0:
             lp = np.array(l, dtype='float')
             lp = np.sort(lp)
+            # lp = sorted(l)
             listas[depth] = lp                  # 存储第depth层的度序列
             l = deque()
 
@@ -126,16 +130,23 @@ def calc_distances_all(vertices, list_vertices, degreeList, part):
             max_layer = min(len(lists_v1), len(lists_v2))
             distances[v1, v2] = {}
 
+            # time0 = time.time()
             # 利用DTW算法计算度序列的差值
             for layer in range(0, max_layer):
                 # 利用DTW求 v1 和 v2 第layer层度序列距离
                 dist, path = fastdtw(lists_v1[layer], lists_v2[layer], radius=1, dist=dist_func)
                 
+                # 利用Levenshtein距离, 求 v1 和 v2 第layer层度序列距离
+                # dist = Levenshtein.distance(''.join(lists_v1[layer].astype(str)), ''.join(lists_v2[layer].astype(str)))
+                # dist = Levenshtein.distance(''.join(lists_v1[layer]), ''.join(lists_v2[layer]))
+
                 # 衰减因子
                 alpha = 0.5
                 dist = math.pow(alpha, layer) * dist
 
                 distances[v1, v2][layer] = dist
+            # time1 = time.time()
+            # print(time1 - time0)
 
         cont += 1
     

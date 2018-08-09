@@ -3,7 +3,6 @@ import random, sys, logging
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from multiprocessing import Manager
 from time import time
-from collections import deque
 
 from utils import *
 from algorithm_walk import *

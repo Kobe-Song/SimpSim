@@ -21,7 +21,7 @@ def combine_sim(pathSim_file_name, structSim_file_name, index):
         if key in list(d_pair_pathsim_dict.keys()):  # 字典只保存了相似度值大于0的记录
             pathsim_score = d_pair_pathsim_dict[key]  # 语义相似度值>0，获取该相似度值
 
-        d_pair_sim_combine_dict[key] = cal_average_sim(d_pair_structsim_dict[key], pathsim_score)  # 使用算术平均式计算合并之后的相似度
+        d_pair_sim_combine_dict[key] = cal_mean_sim(d_pair_structsim_dict[key], pathsim_score)  # 使用算术平均式计算合并之后的相似度
 
     combined_file_name = 'combined_file_name' + str(index)
     save_on_disk(d_pair_sim_combine_dict, combined_file_name)  # 保存最终相似度计算结果
@@ -29,5 +29,8 @@ def combine_sim(pathSim_file_name, structSim_file_name, index):
     return combined_file_name
 
 
-def cal_average_sim(score1, score2):
+def cal_mean_sim(score1, score2):
     return (score1 + score2) / 2.0
+
+def cal_harmonic_sim(score1, score2):
+    return 2.0 / (1 / score1 + 1 / score2)

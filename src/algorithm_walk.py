@@ -11,52 +11,52 @@ from utils import *
 
 
 def generate_similarity_network(file_list, workers):
-    t0 = time()
+    t0 = time.time()
     logging.info('Creating similarity network...')
 
     # 生成每层结点的相似度网络, 每层单独存储, 并构建多层网络
-    os.system("rm " + get_sim_path() + "/../save/weights_similarity-layer-*.pkl")
-    os.system("rm " + get_sim_path() + "/../save/graphs-layer-*.pkl")
+    os.system("rm " + get_sim_path() + "/save/weights_similarity-layer-*.pkl")
+    os.system("rm " + get_sim_path() + "/save/graphs-layer-*.pkl")
     with ProcessPoolExecutor(max_workers=1) as executor:
         job = executor.submit(generate_similarity_network_part1, file_list)
         job.result()
-    t1 = time()
+    t1 = time.time()
     t = t1 - t0
     logging.info('- Time - part 1: {}s'.format(t))
 
-    t0 = time()
-    os.system("rm " + get_sim_path() + "/../save/similarity_nets_weights-layer-*.pkl")
-    os.system("rm " + get_sim_path() + "/../save/alias_method_j-layer-*.pkl")
-    os.system("rm " + get_sim_path() + "/../save/alias_method_q-layer-*.pkl")
+    t0 = time.time()
+    os.system("rm " + get_sim_path() + "/save/similarity_nets_weights-layer-*.pkl")
+    os.system("rm " + get_sim_path() + "/save/alias_method_j-layer-*.pkl")
+    os.system("rm " + get_sim_path() + "/save/alias_method_q-layer-*.pkl")
     with ProcessPoolExecutor(max_workers=1) as executor:
         job = executor.submit(generate_similarity_network_part3)
         job.result()
-    t1 = time()
+    t1 = time.time()
     t = t1 - t0
     logging.info('- Time - part 3: {}s'.format(t))
 
     # 合并多层网络
-    t0 = time()
+    t0 = time.time()
     with ProcessPoolExecutor(max_workers=1) as executor:
         job = executor.submit(generate_similarity_network_part4)
         job.result()
-    t1 = time()
+    t1 = time.time()
     t = t1 - t0
     logging.info('- Time - part 4: {}s'.format(t))
 
-    t0 = time()
+    t0 = time.time()
     with ProcessPoolExecutor(max_workers=1) as executor:
         job = executor.submit(generate_similarity_network_part5)
         job.result()
-    t1 = time()
+    t1 = time.time()
     t = t1 - t0
     logging.info('- Time - part 5: {}s'.format(t))
 
-    t0 = time()
+    t0 = time.time()
     with ProcessPoolExecutor(max_workers=1) as executor:
         job = executor.submit(generate_similarity_network_part6)
         job.result()
-    t1 = time()
+    t1 = time.time()
     t = t1 - t0
     logging.info('- Time - part 6: {}s'.format(t))
 
@@ -125,11 +125,31 @@ def generate_similarity_network_part3():
                 e_list.append(w)
                 sum_w += w
 
-            e_list = [x / sum_w for x in e_list]
+            avg_w = sum_w / len(e_list)
+
+            i = 0
+            j = 0
+            length = len(e_list)
+            while i < length:
+                if e_list[j] < avg_w:
+                    e_list.remove(e_list[j])
+                    graphs[v].pop(j)
+                    j -= 1
+                else:
+                    e_list[j] = e_list[j] / sum_w
+                i += 1
+                j += 1
+
+            if len(e_list) != len(graphs[v]):
+                print(False)
+            # e_list = [x / sum_w for x in e_list]
             weights[v] = e_list
             J, q = alias_setup(e_list)
             alias_method_j[v] = J
             alias_method_q[v] = q
+
+        os.system("rm " + get_sim_path() + "/save/graphs-layer-" + str(layer) + ".pkl")
+        save_on_disk(graphs, 'graphs-layer-' + str(layer))
 
         save_on_disk(weights, 'similarity_nets_weights-layer-' + str(layer))
         save_on_disk(alias_method_j, 'alias_method_j-layer-' + str(layer))
@@ -257,7 +277,7 @@ def generate_random_walks_large_graphs(num_walks, walk_length, workers, vertices
     amount_neighbours = load_from_disk('amount_neighbours')
 
     logging.info('Creating RWs...')
-    t0 = time()
+    t0 = time.time()
 
     walks = deque()
     initialLayer = 0
@@ -269,11 +289,12 @@ def generate_random_walks_large_graphs(num_walks, walk_length, workers, vertices
         for walk_iter in range(num_walks):
             random.shuffle(vertices)
             logging.info("Execution iteration {} ...".format(walk_iter))
-            walk = exec_ramdom_walks_for_chunck(vertices, graphs, alias_method_j, alias_method_q, walk_length, amount_neighbours)
+            # walk = exec_ramdom_walks_for_chunck(vertices, graphs, alias_method_j, alias_method_q, walk_length, amount_neighbours)
+            walk = exec_ramdom_walks_for_chunck(vertices, graphs, alias_method_j, alias_method_q, walk_length)
             walks.extend(walk)
             logging.info("Iteration {} executed.".format(walk_iter))
 
-    t1 = time()
+    t1 = time.time()
     logging.info('RWs created. Time : {}m'.format((t1 - t0) / 60))
     logging.info("Saving Random Walks on disk...")
     save_random_walks(walks)
@@ -286,10 +307,10 @@ def generate_random_walks(num_walks, walk_length, workers, vertices):
     graphs = load_from_disk('similarity_nets_graphs')
     alias_method_j = load_from_disk('nets_weights_alias_method_j')
     alias_method_q = load_from_disk('nets_weights_alias_method_q')
-    amount_neighbours = load_from_disk('amount_neighbours')
+    # amount_neighbours = load_from_disk('amount_neighbours')
 
     logging.info('Creating RWs...')
-    t0 = time()
+    t0 = time.time()
 
     walks = deque()
     initialLayer = 0
@@ -301,7 +322,8 @@ def generate_random_walks(num_walks, walk_length, workers, vertices):
         futures = {}
         for walk_iter in range(num_walks):
             random.shuffle(vertices)
-            job = executor.submit(exec_ramdom_walks_for_chunck, vertices, graphs, alias_method_j, alias_method_q, walk_length, amount_neighbours)
+            # job = executor.submit(exec_ramdom_walks_for_chunck, vertices, graphs, alias_method_j, alias_method_q, walk_length, amount_neighbours)
+            job = executor.submit(exec_ramdom_walks_for_chunck, vertices, graphs, alias_method_j, alias_method_q, walk_length)
             futures[job] = walk_iter
             #part += 1
         logging.info("Receiving results...")
@@ -312,50 +334,67 @@ def generate_random_walks(num_walks, walk_length, workers, vertices):
             walks.extend(walk)
             del futures[job]
 
-    t1 = time()
+    t1 = time.time()
     logging.info('RWs created. Time: {}m'.format((t1 - t0) / 60))
     logging.info("Saving Random Walks on disk...")
     save_random_walks(walks)
 
-
-def exec_ramdom_walks_for_chunck(vertices, graphs, alias_method_j, alias_method_q, walk_length, amount_neighbours):
+# def exec_ramdom_walks_for_chunck(vertices, graphs, alias_method_j, alias_method_q, walk_length, amount_neighbours):
+def exec_ramdom_walks_for_chunck(vertices, graphs, alias_method_j, alias_method_q, walk_length):
     '''将vertices中每个结点作为起始点, 进行随机游走'''
     walks = deque()
     for v in vertices:
-        walks.append(exec_random_walk(graphs, alias_method_j, alias_method_q, v, walk_length, amount_neighbours))
+        # walks.append(exec_random_walk(graphs, alias_method_j, alias_method_q, v, walk_length, amount_neighbours))
+        walks.append(exec_random_walk(graphs, alias_method_j, alias_method_q, v, walk_length))
     return walks
 
-
-def exec_random_walk(graphs, alias_method_j, alias_method_q, v, walk_length, amount_neighbours):
+# def exec_random_walk(graphs, alias_method_j, alias_method_q, v, walk_length, amount_neighbours):
+def exec_random_walk(graphs, alias_method_j, alias_method_q, v, walk_length):
     original_v = v
-    t0 = time()
+    t0 = time.time()
     initialLayer = 0
     layer = initialLayer
 
     path = deque()
     path.append(v)
 
+    num_graphs = len(graphs)
+    prob_move = 1 / num_graphs
+
     while len(path) < walk_length:
         r = random.random()
 
+        current_layer = layer
+
+        for l in range(num_graphs):
+            if r < (l + 1) * prob_move:
+                # 跳转到l层
+                layer = l
+                # 如果仍在当前层, 则添加新结点
+                if current_layer == layer:
+                    v = chooseNeighbor(v, graphs, alias_method_j, alias_method_q, layer)
+                    path.append(v)
+                break
+
+
         # 停留在当前层
-        if (r < 0.5):
-            v = chooseNeighbor(v, graphs, alias_method_j, alias_method_q, layer)
-            path.append(v)
+        # if (r < 0.5):
+        #     v = chooseNeighbor(v, graphs, alias_method_j, alias_method_q, layer)
+        #     path.append(v)
 
-        else:
-            r = random.random()
-            limiar_moveup = prob_moveup(amount_neighbours[layer][v])
-            # 返回上一层
-            if (r > limiar_moveup):
-                if (layer > initialLayer):
-                    layer = layer - 1
-            # 去下一层
-            else:
-                if ((layer + 1) in graphs and v in graphs[layer + 1]):
-                    layer = layer + 1
+        # else:
+        #     r = random.random()
+        #     limiar_moveup = prob_moveup(amount_neighbours[layer][v])
+        #     # 返回上一层
+        #     if (r > limiar_moveup):
+        #         if (layer > initialLayer):
+        #             layer = layer - 1
+        #     # 去下一层
+        #     else:
+        #         if ((layer + 1) in graphs and v in graphs[layer + 1]):
+        #             layer = layer + 1
 
-    t1 = time()
+    t1 = time.time()
     logging.info('RW - vertex {}. Time : {}s'.format(original_v, (t1 - t0)))
 
     return path
@@ -378,7 +417,7 @@ def prob_moveup(amount_neighbours):
 
 
 def save_random_walks(walks):
-    with open('random_walks.txt', 'w') as file:
+    with open('walk_result.txt', 'w') as file:
         for walk in walks:
             line = ''
             for v in walk:
