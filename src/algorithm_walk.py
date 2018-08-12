@@ -136,7 +136,8 @@ def generate_similarity_network_part3():
                     graphs[v].pop(j)
                     j -= 1
                 else:
-                    e_list[j] = e_list[j] / sum_w
+                    if sum_w != 0:
+                        e_list[j] = e_list[j] / sum_w
                 i += 1
                 j += 1
 
@@ -359,8 +360,10 @@ def exec_random_walk(graphs, alias_method_j, alias_method_q, v, walk_length):
     path.append(v)
 
     num_graphs = len(graphs)
-    prob_move = 1 / num_graphs
+    # prob_move = 1 / num_graphs        # 每层网络设置平均概率值
+    prob_move = 0.3     
 
+    layer = 0
     while len(path) < walk_length:
         r = random.random()
 
@@ -376,6 +379,20 @@ def exec_random_walk(graphs, alias_method_j, alias_method_q, v, walk_length):
                     path.append(v)
                 break
 
+        if r < prob_move:
+            layer = 0
+            if current_layer == layer:
+                v = chooseNeighbor(v, graphs, alias_method_j, alias_method_q, layer)
+                path.append(v)
+        else:
+            layer = 1
+            if current_layer == layer:
+                v = chooseNeighbor(v, graphs, alias_method_j, alias_method_q, layer)
+                path.append(v)
+
+        # 仅运行单层网络
+        # v = chooseNeighbor(v, graphs, alias_method_j, alias_method_q, layer)
+        # path.append(v)        
 
         # 停留在当前层
         # if (r < 0.5):

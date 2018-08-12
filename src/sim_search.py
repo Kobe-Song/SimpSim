@@ -2,6 +2,7 @@
 import numpy as np
 from utils import *
 from collections import Counter, defaultdict
+import math
 
 def get_emb_data(emb_file):
     emb_data = load_emb_file(emb_file)
@@ -30,6 +31,33 @@ def cal_euclidean_distance(vec1, vec2):
     dist = np.sqrt(np.sum(np.square(vec1 - vec2)))
     return dist
 
+def cal_cosine_sim(vec1, vec2):
+    multiple = 0
+    norm_vec1 = 0
+    norm_vec2 = 0
+    for v1, v2 in zip(vec1, vec2):
+        multiple += v1 * v2
+        norm_vec1 += v1 ** 2
+        norm_vec2 += v2 ** 2
+    if norm_vec1 == 0 or norm_vec2 == 0:
+        return 0
+    else:
+        return multiple / ((norm_vec1 * norm_vec2) ** 0.5)
+
+def cal_pearson_distance(vector1, vector2):
+    sum1 = sum(vector1)
+    sum2 = sum(vector2)
+
+    sum1Sq = sum([pow(v, 2) for v in vector1])
+    sum2Sq = sum([pow(v, 2) for v in vector2])
+
+    pSum = sum([vector1[i] * vector2[i] for i in range(len(vector1))])
+
+    num = pSum - (sum1 * sum2 / len(vector1))
+    den = math.sqrt((sum1Sq - pow(sum1, 2) / len(vector1)) * (sum2Sq - pow(sum2, 2) / len(vector1)))
+
+    if den == 0: return 0.0
+    return 1.0 - num / den
 
 def sort_dict(dic):
     ''' 将字典转化为列表 '''
@@ -39,7 +67,8 @@ def sort_dict(dic):
 
     lst = [(key, value) for key, value in dic.items()]
     # 对列表元素排序
-    sorted_list = sorted(lst, key=lambda x: x[1])  # 距离升序排序
+    # sorted_list = sorted(lst, key=lambda x: x[1])  # 距离升序排序
+    sorted_list = sorted(lst, key=lambda x: x[1], reverse = True)  # 相似度降序排序
 
     return sorted_list
 
@@ -66,7 +95,7 @@ def top_k_sim_search(embed_file, query_d_list, k):
 
             candi_vec_array = d_vec_dict[candidate_mim]
 
-            dis_candi_query = cal_euclidean_distance(query_d_vec, candi_vec_array)  # 向量的欧式距离
+            dis_candi_query = cal_cosine_sim(query_d_vec, candi_vec_array)  # 向量的余弦相似度
 
             print(query_d, candidate_mim, dis_candi_query)
 
@@ -77,9 +106,10 @@ def top_k_sim_search(embed_file, query_d_list, k):
                 dict_len += 1
             elif dict_len == k:
                 # cur_max_dis = max(sim_d_dict)  # 当前候选疾病中最大距离值
-                cur_max_dis_mim = max(sim_d_dict, key=sim_d_dict.get)
+                # cur_max_dis_mim = max(sim_d_dict, key=sim_d_dict.get)
+                cur_max_dis_mim = min(sim_d_dict, key=sim_d_dict.get)
 
-                if dis_candi_query < float(sim_d_dict[cur_max_dis_mim]):
+                if dis_candi_query > float(sim_d_dict[cur_max_dis_mim]):
                     sim_d_dict.pop(cur_max_dis_mim)  # 删除当前候选结果中距离最大的疾病键值对
                     sim_d_dict[candidate_mim] = dis_candi_query  # 添加新的候选疾病
                 else:

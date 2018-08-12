@@ -80,6 +80,8 @@ def exec_SimpSim(args, filelist):
         pathSim_file_name = exec_pathSim(G)  # 计算语义相似度，返回保存的文件名称
 
         structSim_file_name = exec_StructSim(G, edgefile)  # 计算结构相似度，返回保存的文件名称
+        # pathSim_file_name = 'd_chemical_888d_pair_pathsim'
+        # structSim_file_name = 'd_chemical_888d_other_structsim'
 
         combined_file_name = exec_combine_sim(pathSim_file_name, structSim_file_name, file_index)  # 合并两种相似度并输出最终的相似度【矩阵存储？】【边文件存储？】
 
@@ -222,9 +224,10 @@ def main(args, filelist, query_mim_list, k):
         3. conduct the biased random walk for every node for several times, to generate independent sequences as its context
         4. use the word2vec package to learning the embeddings for every node by its context.
     """
-    # sim_file_list = exec_SimpSim(args, filelist)        # 2. 对所有数据集计算得到相似关系，并保存输出计算结果
+    sim_file_list = exec_SimpSim(args, filelist)        # 2. 对所有数据集计算得到相似关系，并保存输出计算结果
 
-    sim_file_list = ['combined_file_name0', 'combined_file_name1', 'combined_file_name2']
+    # sim_file_list = ['combined_file_name1']
+    # sim_file_list = ['d_chemical_888d_other_structsim', 'd_genes_888d_other_structsim']
     exec_construct_multi_sim_network(sim_file_list)  # 3. 对上一步计算到的多个相似网络进行关联，得到多源相似网络，在网络上执行随机游走
 
     exec_embedding()  # 4. 调用skip-gram模型，学习节点的embedding向量
@@ -235,16 +238,16 @@ def main(args, filelist, query_mim_list, k):
 if __name__ == "__main__":
     args = parse_args()
 
-    filelist = ['mim_cui', 'mim_locus', 'mim_protein']  # 1. 输入数据集, 表型, 染色体, 蛋白质
+    # filelist = ['mim_cui', 'mim_locus', 'mim_protein']  # 1. 输入数据集, 表型, 染色体, 蛋白质
     # filelist = ['mim_geneid', 'mim_protein']  # 数据集
     # filelist = ['d_chemical_888', 'd_genes_888']
-    # filelist = ['d_pubmed_888']
+    filelist = ['d_genes_888']
 
     # query_mim = 'D10652'  # query disease
     query_mim_list = [
         'D10652', 'D11335', 'D11476', 'D12176', 'D12336', 'D12365', 'D12858', 'D12930', 'D13809', 'D1826', 'D1936', 'D2349', 'D2355', 'D2377', 'D2841', 'D3083',
         'D3312', 'D5844', 'D6132', 'D615', 'D7148', 'D83', 'D8469', 'D848', 'D9351', 'D9455', 'D9588'
     ]
-    k = 10  # top k
+    k = 50  # top k
 
     main(args, filelist, query_mim_list, k)
